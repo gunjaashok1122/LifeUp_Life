@@ -111,9 +111,9 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({ friend, onClose
   // Share handler
   const handleShare = async () => {
     const shareText =
-      `🛡️ Meet ${profileInfo.name} (@${profileInfo.username}) on Daily RPG!\n` +
+      `🛡️ Meet ${profileInfo.name} (@${profileInfo.username}) on LevelUp Life!\n` +
       `📊 Level ${stats.level} • ${stats.streak}🔥 day streak • ${stats.habitCount} habits • ${stats.disciplineScore}% discipline\n` +
-      `Join them on the Daily RPG app and level up together!`;
+      `Join them on the LevelUp Life app and level up together!`;
 
     if (navigator.share) {
       try {

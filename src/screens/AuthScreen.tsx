@@ -856,6 +856,20 @@ Once you reset your password, log in with it and the app will automatically migr
                 'Sign Up'
               )}
             </button>
+
+            {isLogin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setIsLogin(false);
+                }}
+                disabled={isWorking}
+                className="w-full py-3 mt-3 rounded-xl border border-rpg-border/60 hover:bg-slate-900/40 text-slate-300 font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
+              >
+                CREATE ACCOUNT
+              </button>
+            )}
           </form>
         )}
 

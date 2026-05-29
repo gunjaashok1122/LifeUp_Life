@@ -6,6 +6,13 @@ export default {
   ],
   darkMode: 'class',
   theme: {
+    screens: {
+      'sm': '640px',
+      'md': '9999px',
+      'lg': '9999px',
+      'xl': '9999px',
+      '2xl': '9999px',
+    },
     extend: {
       colors: {
         rpg: {

@@ -664,10 +664,10 @@ export const MessagesScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[600px]">
+      <div className="grid grid-cols-1 gap-6 h-[460px]">
 
         {/* --- LEFT PANEL: FRIENDS LIST & SEARCH --- */}
-        <div className={`glass-card p-4 md:col-span-1 flex flex-col h-full overflow-hidden ${mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`glass-card p-4 flex flex-col h-full overflow-hidden ${mobileShowChat ? 'hidden' : 'flex'}`}>
 
           {/* Section Header */}
           <div className="pb-3 border-b border-rpg-border/30">
@@ -838,7 +838,7 @@ export const MessagesScreen: React.FC = () => {
         </div>
 
         {/* --- RIGHT PANEL: CHAT WINDOW --- */}
-        <div className={`glass-card md:col-span-2 flex flex-col h-full overflow-hidden relative ${!mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`glass-card flex flex-col h-full overflow-hidden relative ${!mobileShowChat ? 'hidden' : 'flex'}`}>
 
           {selectedFriend ? (
             <>

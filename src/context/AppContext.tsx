@@ -742,59 +742,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const FIREBASE_MASTER_PASSWORD = "rpg_master_password_123!";
 
       const login = async (loginIdentifier: string, password: string) => {
-        let emailToUse = loginIdentifier.trim();
+        const input = loginIdentifier.trim();
+        if (!input) {
+          throw new Error("Please enter your email, username, or phone number.");
+        }
+        if (!password) {
+          throw new Error("Please enter your password.");
+        }
 
-        // Check if it is a valid email format
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginIdentifier);
-
-        let foundUserDoc: any = null;
         const usersRef = collection(db, 'users');
+        let foundUserDoc: any = null;
 
-        if (!isEmail) {
-          // Query Firestore to find the associated email by username or phone
-          const usernameQuery = query(usersRef, where('user.username', '==', loginIdentifier.trim().toLowerCase()));
-          let usernameSnapshot = await getDocs(usernameQuery);
+        // 1. Try to find by email
+        const emailQuery = query(usersRef, where('user.email', '==', input.toLowerCase()));
+        const emailSnapshot = await getDocs(emailQuery);
+        if (!emailSnapshot.empty) {
+          foundUserDoc = emailSnapshot.docs[0];
+        }
 
-          if (usernameSnapshot.empty) {
-            // Fallback to legacy user.name
-            const legacyQuery = query(usersRef, where('user.name', '==', loginIdentifier.trim()));
-            usernameSnapshot = await getDocs(legacyQuery);
-          }
-
+        // 2. Try to find by username
+        if (!foundUserDoc) {
+          const usernameQuery = query(usersRef, where('user.username', '==', input.toLowerCase()));
+          const usernameSnapshot = await getDocs(usernameQuery);
           if (!usernameSnapshot.empty) {
             foundUserDoc = usernameSnapshot.docs[0];
-            emailToUse = foundUserDoc.data().user.email;
-          } else {
-            // Try querying by phone (user.phone)
-            const normalized = normalizePhone(loginIdentifier.trim());
-            const phoneQuery = query(usersRef, where('user.phone', 'in', [loginIdentifier.trim(), normalized]));
-            const phoneSnapshot = await getDocs(phoneQuery);
-            if (!phoneSnapshot.empty) {
-              foundUserDoc = phoneSnapshot.docs[0];
-              emailToUse = foundUserDoc.data().user.email;
-            } else {
-              throw new Error("No account found with this username or phone number.");
-            }
-          }
-        } else {
-          // It is an email, let's query Firestore to find the user document
-          const emailQuery = query(usersRef, where('user.email', '==', emailToUse.toLowerCase()));
-          const emailSnapshot = await getDocs(emailQuery);
-          if (!emailSnapshot.empty) {
-            foundUserDoc = emailSnapshot.docs[0];
           }
         }
 
-        // If user document is found, check custom password logic
-        if (foundUserDoc) {
-          const userData = foundUserDoc.data().user;
-          if (userData && userData.password) {
-            if (userData.password !== password) {
-              throw new Error("Incorrect password.");
-            }
-            await signInWithEmailAndPassword(auth, emailToUse, FIREBASE_MASTER_PASSWORD);
-            return;
+        // 3. Try to find by legacy user.name
+        if (!foundUserDoc) {
+          const legacyQuery = query(usersRef, where('user.name', '==', input));
+          const legacySnapshot = await getDocs(legacyQuery);
+          if (!legacySnapshot.empty) {
+            foundUserDoc = legacySnapshot.docs[0];
           }
+        }
+
+        // 4. Try to find by phone (raw or normalized)
+        if (!foundUserDoc) {
+          const normalized = normalizePhone(input);
+          const phoneQuery = query(usersRef, where('user.phone', 'in', [input, normalized]));
+          const phoneSnapshot = await getDocs(phoneQuery);
+          if (!phoneSnapshot.empty) {
+            foundUserDoc = phoneSnapshot.docs[0];
+          }
+        }
+
+        if (!foundUserDoc) {
+          throw new Error("No account found matching this email, username, or phone number.");
+        }
+
+        const userData = foundUserDoc.data().user;
+        const emailToUse = userData.email;
+
+        // If user document is found, check custom password logic
+        if (userData && userData.password) {
+          if (userData.password !== password) {
+            throw new Error("Incorrect password.");
+          }
+          await signInWithEmailAndPassword(auth, emailToUse, FIREBASE_MASTER_PASSWORD);
+          return;
         }
 
         // Fallback / Migration: If no password in Firestore, try logging in with entered password
@@ -2042,6 +2049,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           throw new Error("PASSWORD_REQUIRED");
         }
 
+        // Validate custom password against Firestore first
+        const userDocRef = doc(db, 'users', uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data().user;
+          if (userData && userData.password) {
+            if (userData.password !== password) {
+              throw new Error("Incorrect password.");
+            }
+            await signInWithEmailAndPassword(auth, saved.email, FIREBASE_MASTER_PASSWORD);
+            return;
+          }
+        }
+
+        // Fallback for unmigrated legacy users
         await signInWithEmailAndPassword(auth, saved.email, password);
       };
 

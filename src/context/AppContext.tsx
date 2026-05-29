@@ -466,9 +466,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [activeScreen, setActiveScreen] = useState<string>(() => {
     try {
+      if (activeUid === 'guest') return 'auth';
       return localStorage.getItem(`lvl_${activeUid}_screen`) || 'dashboard';
     } catch (e) {
-      return 'dashboard';
+      return 'auth';
     }
   });
   const [previousScreen, setPreviousScreen] = useState<string>('dashboard');
@@ -666,7 +667,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setAchievements(savedAchievements ? JSON.parse(savedAchievements) : DEFAULT_ACHIEVEMENTS);
             setLongTermPlans(savedLongTermPlans ? JSON.parse(savedLongTermPlans) : []);
             setFitnessLogs(savedFitnessLogs ? JSON.parse(savedFitnessLogs) : []);
-            if (savedScreen) setScreen(savedScreen);
+            setScreen('auth');
 
             checkDailyReset(u);
             setCurrentUid('guest');

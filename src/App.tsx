@@ -325,7 +325,7 @@ const LayoutWrapper: React.FC = () => {
               </main>
 
               {/* --- MOBILE BOTTOM NAVBAR --- */}
-              <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/90 border-t border-rpg-border/30 backdrop-blur-lg flex justify-around py-2.5 px-1 select-none">
+              <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-rpg-border/30 backdrop-blur-lg flex justify-around py-3 px-2 select-none h-16">
                 {navItems.slice(0, 5).map((item) => {
                   const active = activeScreen === item.id;
                   const isMessages = item.id === 'messages';
@@ -333,14 +333,14 @@ const LayoutWrapper: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => setScreen(item.id)}
-                      className={`flex flex-col items-center gap-0.5 text-[8px] min-[360px]:text-[9px] font-bold transition-all relative ${
-                        active ? 'text-rpg-xp' : 'text-slate-500 hover:text-slate-400'
+                      className={`flex-1 flex flex-col items-center justify-center gap-1 text-[9px] min-[360px]:text-[10px] font-bold transition-all relative py-1 ${
+                        active ? 'text-rpg-xp scale-105' : 'text-slate-500 hover:text-slate-400'
                       }`}
                     >
-                      <div className="w-5 h-5 flex items-center justify-center relative">
-                        {item.icon}
+                      <div className="w-6 h-6 flex items-center justify-center relative">
+                        {React.cloneElement(item.icon, { className: "w-5.5 h-5.5" })}
                         {isMessages && totalUnreads > 0 && (
-                          <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full shadow">
+                          <span className="absolute -top-1.5 -right-1.5 min-w-4.5 h-4.5 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full shadow">
                             {totalUnreads}
                           </span>
                         )}
@@ -358,11 +358,13 @@ const LayoutWrapper: React.FC = () => {
                     <button
                       key={settingsItem.id}
                       onClick={() => setScreen(settingsItem.id)}
-                      className={`flex flex-col items-center gap-0.5 text-[8px] min-[360px]:text-[9px] font-bold transition-all ${
-                        active ? 'text-rpg-xp' : 'text-slate-500 hover:text-slate-400'
+                      className={`flex-1 flex flex-col items-center justify-center gap-1 text-[9px] min-[360px]:text-[10px] font-bold transition-all py-1 ${
+                        active ? 'text-rpg-xp scale-105' : 'text-slate-500 hover:text-slate-400'
                       }`}
                     >
-                      <div className="w-5 h-5 flex items-center justify-center">{settingsItem.icon}</div>
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        {React.cloneElement(settingsItem.icon, { className: "w-5.5 h-5.5" })}
+                      </div>
                       <span className="truncate max-w-[48px] min-[360px]:max-w-[60px] text-center">{settingsItem.label}</span>
                     </button>
                   );
@@ -382,14 +384,14 @@ const LayoutWrapper: React.FC = () => {
             </span>
             <button
               onClick={() => setScreen(activeScreen === 'chat' ? 'dashboard' : 'chat')}
-              className={`w-12 h-12 rounded-full bg-gradient-to-r ${
+              className={`w-14 h-14 rounded-full bg-gradient-to-r ${
                 activeScreen === 'chat'
                   ? 'from-rpg-discipline to-emerald-600 border-rpg-discipline/30'
                   : 'from-rpg-level to-indigo-600 border-rpg-level/30 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
               } hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center border text-white`}
               title="AI Oracle"
             >
-              <Pencil className="w-5 h-5" />
+              <Pencil className="w-6 h-6" />
             </button>
           </div>
 

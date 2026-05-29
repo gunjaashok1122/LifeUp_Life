@@ -671,7 +671,7 @@ Once you reset your password, log in with it and the app will automatically migr
             <div className="flex p-1 bg-slate-950/60 rounded-xl border border-rpg-border/40 mb-2">
               <button
                 type="button"
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${
                   isLogin ? 'bg-rpg-border text-white shadow' : 'text-slate-500 hover:text-slate-300'
                 }`}
                 onClick={() => {
@@ -684,7 +684,7 @@ Once you reset your password, log in with it and the app will automatically migr
               </button>
               <button
                 type="button"
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${
                   !isLogin ? 'bg-rpg-border text-white shadow' : 'text-slate-500 hover:text-slate-300'
                 }`}
                 onClick={() => {
@@ -896,7 +896,7 @@ Once you reset your password, log in with it and the app will automatically migr
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isWorking}
-            className="w-full py-2.5 rounded-xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 rounded-xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
           >
             {/* Simple Google G logo */}
             <svg className="w-4 h-4" viewBox="0 0 24 24">

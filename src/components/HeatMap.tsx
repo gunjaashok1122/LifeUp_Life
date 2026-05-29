@@ -48,12 +48,12 @@ export const HeatMap: React.FC<HeatMapProps> = ({ completedDates, onDateClick })
   const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
-    <div className="p-4 rounded-2xl bg-rpg-card/60 border border-rpg-border/30 backdrop-blur-md">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-semibold text-slate-300">
+    <div className="p-3 rounded-xl bg-rpg-card/60 border border-rpg-border/30 backdrop-blur-md w-full max-w-[340px] mx-auto">
+      <div className="flex items-center justify-between mb-3 px-1">
+        <h4 className="text-xs font-semibold text-slate-300">
           {monthNames[month]} {year}
         </h4>
-        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+        <div className="flex items-center gap-1.5 text-[9px] text-slate-400">
           <span>Less</span>
           <div className="w-2.5 h-2.5 rounded-sm bg-slate-800 border border-slate-700/50" />
           <div className="w-2.5 h-2.5 rounded-sm bg-rpg-discipline/40" />
@@ -62,10 +62,10 @@ export const HeatMap: React.FC<HeatMapProps> = ({ completedDates, onDateClick })
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5 text-center">
+      <div className="grid grid-cols-7 gap-1.5 text-center justify-items-center">
         {/* Week Day Labels */}
         {weekDays.map((wd, i) => (
-          <span key={i} className="text-[10px] font-bold text-slate-500 py-1">
+          <span key={i} className="text-[10px] font-bold text-slate-500 w-10 h-10 flex items-center justify-center">
             {wd}
           </span>
         ))}
@@ -73,7 +73,7 @@ export const HeatMap: React.FC<HeatMapProps> = ({ completedDates, onDateClick })
         {/* Heatmap Grid Cells */}
         {gridCells.map((cell, index) => {
           if (cell === null) {
-            return <div key={`blank-${index}`} className="aspect-square" />;
+            return <div key={`blank-${index}`} className="w-10 h-10" />;
           }
 
           const status = getDayStatus(cell);
@@ -81,7 +81,7 @@ export const HeatMap: React.FC<HeatMapProps> = ({ completedDates, onDateClick })
 
           let bgClass = 'bg-slate-800/40 border-slate-700/30';
           if (status === 'completed') {
-            bgClass = 'bg-rpg-discipline border-rpg-discipline/60 shadow-[0_0_8px_rgba(16,185,129,0.4)] text-slate-900 font-medium';
+            bgClass = 'bg-rpg-discipline border-rpg-discipline/60 shadow-[0_0_8px_rgba(16,185,129,0.4)] text-slate-900 font-semibold';
           } else if (status === 'future') {
             bgClass = 'bg-slate-900/20 border-slate-800/20 text-slate-600 cursor-not-allowed';
           }
@@ -98,7 +98,7 @@ export const HeatMap: React.FC<HeatMapProps> = ({ completedDates, onDateClick })
                 }
               }}
               disabled={!isClickable}
-              className={`aspect-square rounded-lg flex items-center justify-center text-[10px] border transition-all duration-200 ${bgClass} ${
+              className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs border transition-all duration-200 ${bgClass} ${
                 isToday && status !== 'completed' ? 'border-rpg-xp text-rpg-xp font-semibold bg-rpg-xp/10' : ''
               } ${isClickable ? 'cursor-pointer hover:scale-105 active:scale-95' : ''}`}
               title={cell ? `Day ${cell}` : ''}

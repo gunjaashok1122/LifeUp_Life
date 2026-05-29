@@ -9,6 +9,7 @@ interface AvatarBuilderProps {
   interactive?: boolean;
   showCamera?: boolean;
   profilePicture?: string;
+  onCameraClick?: (e: React.MouseEvent) => void;
 }
 
 export const AvatarBuilder: React.FC<AvatarBuilderProps> = (props) => {
@@ -264,16 +265,23 @@ export const AvatarBuilder: React.FC<AvatarBuilderProps> = (props) => {
       {showCamera && (
         <label 
           className="absolute bottom-0 right-0 w-8 h-8 bg-slate-950 border border-rpg-border/60 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:bg-slate-800 transition-all hover:scale-110 active:scale-95 group/cam z-10"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (props.onCameraClick) {
+              props.onCameraClick(e);
+            }
+          }}
           title="Upload custom picture"
         >
           <Camera className="w-4 h-4 text-rpg-xp group-hover/cam:text-white transition-colors" />
-          <input 
-            type="file" 
-            accept="image/*" 
-            className="hidden" 
-            onChange={handleFileChange} 
-          />
+          {!props.onCameraClick && (
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={handleFileChange} 
+            />
+          )}
         </label>
       )}
     </div>

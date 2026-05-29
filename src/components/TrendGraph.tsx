@@ -21,13 +21,13 @@ export const TrendGraph: React.FC<TrendGraphProps> = ({
   currentValue,
   onClick
 }) => {
-  // SVG size: 320 x 140
+  // SVG size: 320 x 100
   const width = 320;
-  const height = 140;
-  const paddingLeft = 35;
-  const paddingRight = 15;
-  const paddingTop = 20;
-  const paddingBottom = 25;
+  const height = 100;
+  const paddingLeft = 30;
+  const paddingRight = 10;
+  const paddingTop = 12;
+  const paddingBottom = 20;
 
   const chartWidth = width - paddingLeft - paddingRight;
   const chartHeight = height - paddingTop - paddingBottom;
@@ -67,15 +67,15 @@ export const TrendGraph: React.FC<TrendGraphProps> = ({
   return (
     <div 
       onClick={onClick}
-      className={`w-full p-4 rounded-xl bg-slate-950/40 border border-rpg-border/20 space-y-2 transition-all ${
+      className={`w-full p-2.5 rounded-xl bg-slate-950/40 border border-rpg-border/20 space-y-1 transition-all ${
         onClick 
-          ? 'cursor-pointer hover:scale-[1.02] hover:bg-slate-900/60 hover:border-indigo-500/50 active:scale-95 shadow-[0_0_15px_rgba(99,102,241,0.02)] hover:shadow-[0_0_20px_rgba(99,102,241,0.08)]' 
+          ? 'cursor-pointer hover:scale-[1.02] hover:bg-slate-900/60 hover:border-indigo-500/50 active:scale-95' 
           : ''
       }`}
     >
-      <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-        <span>{title}</span>
-        <span style={{ color }} className="font-extrabold">{currentValue}%</span>
+      <div className="flex justify-between items-center text-xs font-semibold text-slate-400">
+        <span className="truncate pr-2 max-w-[75%] text-white font-black text-[13px] tracking-tight">{title}</span>
+        <span style={{ color }} className="font-black flex-shrink-0 text-xs">{currentValue}%</span>
       </div>
       
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full overflow-visible select-none">
@@ -148,26 +148,14 @@ export const TrendGraph: React.FC<TrendGraphProps> = ({
 
         {/* Highlight current month point */}
         {points.length > 0 && (
-          <g>
-            <circle
-              cx={points[points.length - 1].x}
-              cy={points[points.length - 1].y}
-              r="4"
-              fill={color}
-              stroke="#0f172a"
-              strokeWidth="1.5"
-            />
-            <circle
-              cx={points[points.length - 1].x}
-              cy={points[points.length - 1].y}
-              r="8"
-              fill="none"
-              stroke={color}
-              strokeWidth="1.5"
-              opacity="0.4"
-              className="animate-ping"
-            />
-          </g>
+          <circle
+            cx={points[points.length - 1].x}
+            cy={points[points.length - 1].y}
+            r="4"
+            fill={color}
+            stroke="#0f172a"
+            strokeWidth="1.5"
+          />
         )}
 
         <defs>

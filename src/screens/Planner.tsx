@@ -883,7 +883,7 @@ export const Planner: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   {/* Information */}
                   <div className="space-y-1.5 max-w-xl">
-                    <h4 className={`text-sm font-black ${
+                    <h4 className={`text-base font-black tracking-tight ${
                       isDone 
                         ? 'text-rpg-discipline' 
                         : isFailed 
@@ -1057,7 +1057,7 @@ export const Planner: React.FC = () => {
               <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
                 {showPerformanceChart ? "Discipline Performance Trend" : "Discipline Tracker Checklist"}
               </div>
-              <h3 className="text-base sm:text-lg font-black text-white mt-1 flex items-center gap-2">
+              <h3 className="text-lg sm:text-xl font-black text-white mt-1 flex items-center gap-2">
                 <span>📋</span> {trackingPlan.title}
               </h3>
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
@@ -1067,7 +1067,7 @@ export const Planner: React.FC = () => {
 
             {showPerformanceChart ? (
               /* Performance Chart View */
-              <div className="flex-1 min-h-[300px] bg-slate-950/60 border border-rpg-border/40 rounded-xl p-4 flex flex-col gap-3 justify-center">
+              <div className="bg-slate-950/60 border border-rpg-border/40 rounded-xl p-3 flex flex-col gap-2">
                 {(() => {
                   const dates = getDatesInRange(trackingPlan.fromDate, trackingPlan.toDate);
                   const data = dates.map(d => {
@@ -1085,11 +1085,11 @@ export const Planner: React.FC = () => {
 
                   // Chart Coordinates
                   const width = 800;
-                  const height = 300;
+                  const height = 180;
                   const paddingLeft = 50;
                   const paddingRight = 30;
-                  const paddingTop = 30;
-                  const paddingBottom = 40;
+                  const paddingTop = 20;
+                  const paddingBottom = 30;
 
                   const chartWidth = width - paddingLeft - paddingRight;
                   const chartHeight = height - paddingTop - paddingBottom;
@@ -1184,7 +1184,7 @@ export const Planner: React.FC = () => {
                             const showLabel = data.length < 15 || index % Math.ceil(data.length / 10) === 0 || index === data.length - 1;
                             if (!showLabel) return null;
                             const dateObj = new Date(p.dateStr);
-                            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 2);
+                            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 3);
                             const dayNum = dateObj.getDate();
                             return (
                               <text 
@@ -1231,7 +1231,7 @@ export const Planner: React.FC = () => {
                       </th>
                       {getDatesInRange(trackingPlan.fromDate, trackingPlan.toDate).map(d => {
                         const date = new Date(d);
-                        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 2);
+                        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 3);
                         const dayNum = date.getDate();
                         const monthName = date.toLocaleDateString('en-US', { month: 'short' });
                         return (

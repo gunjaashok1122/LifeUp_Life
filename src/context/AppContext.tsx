@@ -489,7 +489,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>(() => {
     try {
       const saved = localStorage.getItem('lvl_saved_accounts');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      const filtered = parsed.filter((acc: any) => acc.uid !== 'guest' && acc.username !== 'hero');
+      if (parsed.length !== filtered.length) {
+        localStorage.setItem('lvl_saved_accounts', JSON.stringify(filtered));
+      }
+      return filtered;
     } catch (e) {
       return [];
     }
@@ -1099,7 +1104,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }, [user, firebaseUser, authLoading, currentUid]);
 
       useEffect(() => {
-        if (!user || !currentUid) return;
+        if (!user || !currentUid || currentUid === 'guest' || user.username === 'hero') return;
         setSavedAccounts(prev => {
           const existingIndex = prev.findIndex(acc => acc.uid === currentUid);
           const accountData = {
@@ -1120,8 +1125,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else {
             next = [...prev, accountData];
           }
-          localStorage.setItem('lvl_saved_accounts', JSON.stringify(next));
-          return next;
+          const filteredNext = next.filter(acc => acc.uid !== 'guest' && acc.username !== 'hero');
+          localStorage.setItem('lvl_saved_accounts', JSON.stringify(filteredNext));
+          return filteredNext;
         });
       }, [user, currentUid]);
 

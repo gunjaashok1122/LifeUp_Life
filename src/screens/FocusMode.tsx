@@ -253,7 +253,7 @@ export const FocusMode: React.FC = () => {
         {/* Neon focus glow backdrop */}
         <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent pointer-events-none" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-start relative z-10">
           
           {/* Left Column: Timer, Custom Time & Controls */}
           <div className="flex flex-col items-center justify-center space-y-6">
@@ -267,35 +267,35 @@ export const FocusMode: React.FC = () => {
             </div>
 
             {/* Large Countdown Circular Ring */}
-            <div className="relative w-64 h-64 flex items-center justify-center">
-              <svg width="240" height="240" className="transform -rotate-90">
+            <div className="relative w-48 h-48 flex items-center justify-center">
+              <svg width="180" height="180" className="transform -rotate-90">
                 <circle
                   stroke="rgba(34, 49, 80, 0.4)"
                   fill="transparent"
-                  strokeWidth="10"
-                  r="105"
-                  cx="120"
-                  cy="120"
+                  strokeWidth="8"
+                  r="75"
+                  cx="90"
+                  cy="90"
                 />
                 <circle
                   stroke={isBreak ? '#10b981' : '#a855f7'}
                   fill="transparent"
-                  strokeWidth="10"
-                  strokeDasharray={2 * Math.PI * 105}
-                  strokeDashoffset={2 * Math.PI * 105 - (currentPercent / 100) * (2 * Math.PI * 105)}
+                  strokeWidth="8"
+                  strokeDasharray={2 * Math.PI * 75}
+                  strokeDashoffset={2 * Math.PI * 75 - (currentPercent / 100) * (2 * Math.PI * 75)}
                   strokeLinecap="round"
-                  r="105"
-                  cx="120"
-                  cy="120"
+                  r="75"
+                  cx="90"
+                  cy="90"
                   className="transition-all duration-1000 ease-linear"
                   style={{ filter: `drop-shadow(0 0 6px ${isBreak ? 'rgba(16,185,129,0.3)' : 'rgba(168,85,247,0.3)'})` }}
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-black font-sans tracking-tight text-white select-none">
+                <span className="text-3xl font-black font-sans tracking-tight text-white select-none">
                   {formatTime(timeLeft)}
                 </span>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
                   Time Remaining
                 </span>
               </div>
@@ -395,7 +395,7 @@ export const FocusMode: React.FC = () => {
           </div>
 
           {/* Right Column: Regular Focus Presets */}
-          <div className="flex flex-col space-y-4 h-full justify-start border-t border-slate-800 pt-6 md:border-t-0 md:pt-0 md:border-l md:border-slate-850 md:pl-8">
+          <div className="flex flex-col space-y-4 h-full justify-start border-t border-slate-800 pt-6 sm:border-t-0 sm:pt-0 sm:border-l sm:border-slate-850 sm:pl-8">
             <div className="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
               <span>Regular Focus</span>
               {!isAddingPreset && (
@@ -506,7 +506,7 @@ export const FocusMode: React.FC = () => {
             🛡️ Your logs are empty. Complete a focus session to record history!
           </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1 no-scrollbar">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1 no-scrollbar">
             {sessionHistory.map((item) => (
               <div
                 key={item.id}

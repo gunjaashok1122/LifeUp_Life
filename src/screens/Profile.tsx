@@ -219,17 +219,6 @@ export const Profile: React.FC = () => {
     setEmail(user.email || firebaseUser?.email || '');
   }, [user.name, user.username, user.phone, user.email, firebaseUser?.email]);
 
-  // Default to performance tab if returning from a checklist
-  useEffect(() => {
-    if (
-      previousScreen === 'planner' || 
-      previousScreen === 'fitness' || 
-      previousScreen === 'habits' || 
-      previousScreen === 'long-term-planning'
-    ) {
-      setActiveTab('performance');
-    }
-  }, [previousScreen]);
 
   // --- Fitness and Habits trend data calculations ---
   const todayStr = new Date().toISOString().split('T')[0];
@@ -301,7 +290,7 @@ export const Profile: React.FC = () => {
   const avgPerfScore = Math.round(dailyPerfData.reduce((a, b) => a + b, 0) / dailyPerfData.length);
 
   // Build SVG smooth line for daily perf
-  const perfW = 600, perfH = 130, perfPL = 32, perfPR = 12, perfPT = 14, perfPB = 28;
+  const perfW = 320, perfH = 100, perfPL = 30, perfPR = 10, perfPT = 12, perfPB = 20;
   const perfCW = perfW - perfPL - perfPR;
   const perfCH = perfH - perfPT - perfPB;
   const perfPts = dailyPerfData.map((v, i) => ({
@@ -1020,7 +1009,7 @@ export const Profile: React.FC = () => {
                 📜 No active planning objectives found. Create long-term plans in the Planner to track your consistency graphs here!
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-3">
                 {longTermPlans.map((plan, idx) => {
                   const { trend, labels } = getPlanTrendData(plan);
                   const colorConfig = GRAPH_COLORS[idx % GRAPH_COLORS.length];
@@ -1034,7 +1023,7 @@ export const Profile: React.FC = () => {
                       color={colorConfig.stroke}
                       gradientId={`profilePlanTrendGrad_${plan.id}`}
                       stopColor={colorConfig.stop}
-                      title={plan.title}
+                      title={`${plan.type === 'week' ? 'Weekly Plan' : 'Monthly Plan'}: ${plan.title}`}
                       currentValue={currentVal}
                       onClick={() => {
                         setActivePlanForModal(plan);
@@ -1047,32 +1036,22 @@ export const Profile: React.FC = () => {
           </div>
 
           {/* 2. Fitness Tracking Trends */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Dumbbell className="w-4 h-4 text-emerald-400 animate-pulse" /> Fitness Tracking Trends
+          <div className="space-y-2">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <Dumbbell className="w-3.5 h-3.5 text-emerald-400 animate-pulse" /> Fitness Tracking Trends
             </h3>
             
-            {/* Daily Performance SVG Graph */}
-            <div 
-              onClick={() => setShowFitnessModal(true)}
-              className="glass-card p-5 space-y-4 cursor-pointer hover:scale-[1.01] hover:border-emerald-500/40 hover:bg-slate-900/60 active:scale-98 transition-all shadow-[0_0_15px_rgba(16,185,129,0.02)]"
-            >
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Daily Performance (Combined Targets %)
-                </h4>
-                <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500">
-                  <div className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                    Today: <span className="text-white">{currentPerfScore}%</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400 inline-block" />
-                    Avg: <span className="text-white">{avgPerfScore}%</span>
-                  </div>
+            {/* All 3 Fitness Charts in compact grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Daily Performance SVG Graph */}
+              <div 
+                onClick={() => setShowFitnessModal(true)}
+                className="w-full p-2.5 rounded-xl bg-slate-950/40 border border-rpg-border/20 space-y-1 cursor-pointer hover:scale-[1.02] hover:border-emerald-500/50 hover:bg-slate-900/60 active:scale-95 transition-all"
+              >
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                  <span className="truncate pr-2 max-w-[70%]">Daily Performance</span>
+                  <span className="text-emerald-400 font-extrabold flex-shrink-0">{currentPerfScore}%</span>
                 </div>
-              </div>
-              <div className="rounded-xl bg-slate-950/40 border border-rpg-border/20 p-3">
                 <svg viewBox={`0 0 ${perfW} ${perfH}`} className="w-full overflow-visible select-none">
                   <defs>
                     <linearGradient id="profilePerfGrad" x1="0" y1="0" x2="0" y2="1">
@@ -1080,49 +1059,34 @@ export const Profile: React.FC = () => {
                       <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  {[25, 50, 75, 100].map((yv, idx) => {
+                  {[25, 50, 75].map((yv, idx) => {
                     const y = perfPT + perfCH - (yv / 100) * perfCH;
                     return (
-                      <g key={idx} opacity="0.12">
+                      <g key={idx} opacity="0.15">
                         <line x1={perfPL} y1={y} x2={perfW - perfPR} y2={y} stroke="#cbd5e1" strokeDasharray="3,3" />
-                        <text x={perfPL - 5} y={y + 3} fill="#cbd5e1" fontSize="7" textAnchor="end" fontWeight="bold">{yv}%</text>
+                        <text x={perfPL - 8} y={y + 3} fill="#cbd5e1" fontSize="8" textAnchor="end" fontWeight="bold">{yv}%</text>
                       </g>
                     );
                   })}
-                  {(() => {
-                    const avgY = perfPT + perfCH - (avgPerfScore / 100) * perfCH;
-                    return (
-                      <line x1={perfPL} y1={avgY} x2={perfW - perfPR} y2={avgY}
-                        stroke="#818cf8" strokeWidth="1" strokeDasharray="5,4" opacity="0.5" />
-                    );
-                  })()}
                   {perfLabels.map((lbl, idx) => {
                     if (!lbl) return null;
                     const x = perfPL + (idx / (dailyPerfData.length - 1)) * perfCW;
                     return (
-                      <text key={idx} x={x} y={perfH - 6} fill="#94a3b8" fontSize="7.5"
+                      <text key={idx} x={x} y={perfH - 8} fill="#94a3b8" fontSize="8"
                         textAnchor="middle" fontWeight="bold" opacity="0.7">{lbl}</text>
                     );
                   })}
                   <path d={perfArea} fill="url(#profilePerfGrad)" />
-                  <path d={perfLine} fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  {perfPts.map((pt, idx) => {
-                    if (idx % 5 !== 0 && idx !== perfPts.length - 1) return null;
-                    return (
-                      <circle key={idx} cx={pt.x} cy={pt.y} r="3" fill="#34d399" stroke="#0f172a" strokeWidth="1.5" />
-                    );
-                  })}
-                  <circle cx={perfLast.x} cy={perfLast.y} r="5" fill="#34d399" stroke="#0f172a" strokeWidth="2" />
-                  <circle cx={perfLast.x} cy={perfLast.y} r="9" fill="none" stroke="#34d399" strokeWidth="1.5" opacity="0.4" className="animate-ping" />
+                  <path d={perfLine} fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  {perfPts.length > 0 && (
+                    <circle cx={perfLast.x} cy={perfLast.y} r="4" fill="#34d399" stroke="#0f172a" strokeWidth="1.5" />
+                  )}
                 </svg>
               </div>
-            </div>
 
-            {/* Weekly Steps & Calories Charts side-by-side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Weekly Steps Line Chart */}
               {(() => {
-                const W = 320, H = 110, PL = 30, PR = 10, PT = 12, PB = 22;
+                const W = 320, H = 100, PL = 30, PR = 10, PT = 12, PB = 20;
                 const CW = W - PL - PR, CH = H - PT - PB;
                 const vals = weeklyChartData.map(d => d.steps);
                 const maxV = Math.max(...vals, 1);
@@ -1140,10 +1104,10 @@ export const Profile: React.FC = () => {
                 return (
                   <div 
                     onClick={() => setShowFitnessModal(true)}
-                    className="glass-card p-4 space-y-1 cursor-pointer hover:scale-[1.02] hover:border-cyan-500/40 hover:bg-slate-900/60 active:scale-95 transition-all shadow-[0_0_15px_rgba(6,182,212,0.02)]"
+                    className="w-full p-2.5 rounded-xl bg-slate-950/40 border border-rpg-border/20 space-y-1 cursor-pointer hover:scale-[1.02] hover:border-cyan-500/50 hover:bg-slate-900/60 active:scale-95 transition-all"
                   >
                     <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
-                      <span className="flex items-center gap-1"><Footprints className="w-3 h-3 text-cyan-400" /> Steps Walked</span>
+                      <span className="flex items-center gap-1"><Footprints className="w-3 h-3 text-cyan-400" /> Steps</span>
                       <span className="text-cyan-400">{weeklyChartData[weeklyChartData.length-1].steps.toLocaleString()}</span>
                     </div>
                     <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible select-none">
@@ -1164,7 +1128,6 @@ export const Profile: React.FC = () => {
                       <path d={line} fill="none" stroke="#06b6d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       {pts.map((pt, i) => <circle key={i} cx={pt.x} cy={pt.y} r="3" fill="#06b6d4" stroke="#0f172a" strokeWidth="1.5" />)}
                       <circle cx={last.x} cy={last.y} r="5" fill="#06b6d4" stroke="#0f172a" strokeWidth="2" />
-                      <circle cx={last.x} cy={last.y} r="9" fill="none" stroke="#06b6d4" strokeWidth="1.5" opacity="0.4" className="animate-ping" />
                     </svg>
                   </div>
                 );
@@ -1172,7 +1135,7 @@ export const Profile: React.FC = () => {
 
               {/* Weekly Calories Line Chart */}
               {(() => {
-                const W = 320, H = 110, PL = 30, PR = 10, PT = 12, PB = 22;
+                const W = 320, H = 100, PL = 30, PR = 10, PT = 12, PB = 20;
                 const CW = W - PL - PR, CH = H - PT - PB;
                 const vals = weeklyChartData.map(d => d.calories);
                 const maxV = Math.max(...vals, 1);
@@ -1190,10 +1153,10 @@ export const Profile: React.FC = () => {
                 return (
                   <div 
                     onClick={() => setShowFitnessModal(true)}
-                    className="glass-card p-4 space-y-1 cursor-pointer hover:scale-[1.02] hover:border-orange-500/40 hover:bg-slate-900/60 active:scale-95 transition-all shadow-[0_0_15px_rgba(249,115,22,0.02)]"
+                    className="w-full p-2.5 rounded-xl bg-slate-950/40 border border-rpg-border/20 space-y-1 cursor-pointer hover:scale-[1.02] hover:border-orange-500/50 hover:bg-slate-900/60 active:scale-95 transition-all"
                   >
                     <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
-                      <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-orange-400" /> Calories Burned</span>
+                      <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-orange-400" /> Calories</span>
                       <span className="text-orange-400">{weeklyChartData[weeklyChartData.length-1].calories} kcal</span>
                     </div>
                     <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible select-none">
@@ -1214,7 +1177,6 @@ export const Profile: React.FC = () => {
                       <path d={line} fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       {pts.map((pt, i) => <circle key={i} cx={pt.x} cy={pt.y} r="3" fill="#f97316" stroke="#0f172a" strokeWidth="1.5" />)}
                       <circle cx={last.x} cy={last.y} r="5" fill="#f97316" stroke="#0f172a" strokeWidth="2" />
-                      <circle cx={last.x} cy={last.y} r="9" fill="none" stroke="#f97316" strokeWidth="1.5" opacity="0.4" className="animate-ping" />
                     </svg>
                   </div>
                 );
@@ -1232,7 +1194,7 @@ export const Profile: React.FC = () => {
                 🌱 No habits tracked yet. Set habits in the Habits tab to view consistency trends!
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-3">
                 {/* Individual habits trends */}
                 {habits.map((habit, idx) => {
                   const trend = last7DaysDates.map(dateStr => habit.completedDates.includes(dateStr) ? 100 : 0);
@@ -1583,7 +1545,7 @@ export const Profile: React.FC = () => {
                 <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
                   Discipline Tracker Checklist
                 </div>
-                <h3 className="text-base sm:text-lg font-black text-white mt-1 flex items-center gap-2">
+                <h3 className="text-lg sm:text-xl font-black text-white mt-1 flex items-center gap-2">
                   <span>📋</span> {currentPlanInstance.title}
                 </h3>
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
@@ -1601,7 +1563,7 @@ export const Profile: React.FC = () => {
                       </th>
                       {getDatesInRange(currentPlanInstance.fromDate, currentPlanInstance.toDate).map(d => {
                         const date = new Date(d);
-                        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 2);
+                        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 3);
                         const dayNum = date.getDate();
                         const monthName = date.toLocaleDateString('en-US', { month: 'short' });
                         return (

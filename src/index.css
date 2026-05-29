@@ -188,8 +188,11 @@
 
   .phone-container {
     position: relative;
-    width: calc(min(840px, 86vh) * (390 / 800));
-    height: min(840px, 86vh);
+    height: calc(100vh - 180px);
+    max-height: 800px;
+    min-height: 400px;
+    aspect-ratio: 390 / 800;
+    box-sizing: border-box;
     background: #0f172a;
     border: 12px solid #1e293b;
     border-radius: 46px;
@@ -201,6 +204,33 @@
     flex-direction: column;
     /* Create containing block for fixed positioned elements */
     transform: translate3d(0, 0, 0);
+  }
+
+  /* Responsive styling for smaller height screens to avoid clipping */
+  @media (max-height: 720px) {
+    .desktop-header {
+      margin-bottom: 8px;
+    }
+    .desktop-header h1 {
+      font-size: 1.5rem;
+    }
+    .desktop-header span {
+      margin-top: 4px;
+      padding: 2px 8px;
+    }
+    .phone-container {
+      height: calc(100vh - 140px);
+    }
+  }
+
+  @media (max-height: 600px) {
+    .desktop-header {
+      display: none;
+    }
+    .phone-container {
+      height: calc(100vh - 30px);
+      min-height: 350px;
+    }
   }
 
   /* Dynamic Island Notch */

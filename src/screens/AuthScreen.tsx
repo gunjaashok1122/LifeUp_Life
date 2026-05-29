@@ -320,6 +320,13 @@ export const AuthScreen: React.FC = () => {
     setLoading(true);
     try {
       const result = await initiateForgotPassword(forgotIdentifier);
+      if (result.emailSent) {
+        alert(`A password reset link has been successfully sent to your email address: ${result.email}.\n\nPlease check your Inbox and Spam/Junk folder.`);
+        setShowForgot(false);
+        setForgotIdentifier('');
+        return;
+      }
+
       setForgotOtp(result.otp);
       setForgotIsMigrated(result.isMigrated);
       setForgotUserUid(result.uid);

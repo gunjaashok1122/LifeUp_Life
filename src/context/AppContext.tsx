@@ -186,6 +186,7 @@ interface AppContextType {
     email: string;
     phone: string;
     uid: string;
+    emailSent?: boolean;
   }>;
   resetPasswordWithOtp: (uid: string, newPassword: string) => Promise<void>;
   updatePasswordInFirestore: (newPassword: string) => Promise<void>;
@@ -328,15 +329,23 @@ const DEFAULT_QUESTS: Quest[] = [
 export const normalizePhone = (phoneStr: string, defaultCode: string = '+91'): string => {
   const cleaned = phoneStr.trim().replace(/[\s\-()]/g, '');
   if (!cleaned) return '';
-  if (cleaned.startsWith('+')) {
+  
+  if (cleaned.startsWith(defaultCode)) {
     return cleaned;
   }
-  // If it starts with the default code without '+' (e.g. '919100688233')
+  
   const codeDigits = defaultCode.replace('+', '');
-  if (cleaned.startsWith(codeDigits) && cleaned.length > 10) {
-    return '+' + cleaned;
+  
+  let raw = cleaned;
+  if (raw.startsWith('+')) {
+    raw = raw.substring(1);
   }
-  return defaultCode + cleaned;
+  
+  if (raw.startsWith(codeDigits) && raw.length > 10) {
+    return '+' + raw;
+  }
+  
+  return defaultCode + raw;
 };
 
 const playNotificationSound = () => {
@@ -957,11 +966,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const initiateForgotPassword = async (identifier: string) => {
         const cleanIdentifier = identifier.trim();
-        if (!cleanIdentifier) throw new Error("Please enter your email address or phone number.");
+        if (!cleanIdentifier) throw new Error("Please enter your email address, phone number, or username.");
 
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanIdentifier);
         const usersRef = collection(db, 'users');
         let userDoc: any = null;
+
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanIdentifier);
+        const isPhoneSearch = /^[0-9+\s\-()]+$/.test(cleanIdentifier) && cleanIdentifier.replace(/[^0-9]/g, '').length >= 10;
 
         if (isEmail) {
           const emailQuery = query(usersRef, where('user.email', '==', cleanIdentifier.toLowerCase()));
@@ -969,26 +980,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (!snap.empty) {
             userDoc = snap.docs[0];
           }
-        } else {
-          // Check phone
+        } else if (isPhoneSearch) {
           const normalized = normalizePhone(cleanIdentifier);
           const phoneQuery = query(usersRef, where('user.phone', 'in', [cleanIdentifier, normalized]));
-          let snap = await getDocs(phoneQuery);
+          const snap = await getDocs(phoneQuery);
+          if (!snap.empty) {
+            userDoc = snap.docs[0];
+          }
+        } else {
+          // Check username
+          const usernameQuery = query(usersRef, where('user.username', '==', cleanIdentifier.toLowerCase()));
+          let snap = await getDocs(usernameQuery);
           if (!snap.empty) {
             userDoc = snap.docs[0];
           } else {
-            // Check username as fallback
-            const usernameQuery = query(usersRef, where('user.username', '==', cleanIdentifier.toLowerCase()));
-            snap = await getDocs(usernameQuery);
+            // Legacy name fallback
+            const nameQuery = query(usersRef, where('user.name', '==', cleanIdentifier));
+            snap = await getDocs(nameQuery);
             if (!snap.empty) {
               userDoc = snap.docs[0];
-            } else {
-              // Legacy name fallback
-              const nameQuery = query(usersRef, where('user.name', '==', cleanIdentifier));
-              snap = await getDocs(nameQuery);
-              if (!snap.empty) {
-                userDoc = snap.docs[0];
-              }
             }
           }
         }
@@ -1003,18 +1013,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const phone = userData.phone || '';
         const isMigrated = !!userData.password;
 
-        // Generate OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-        // Determine send channel
-        const type: 'sms' | 'email' = phone ? 'sms' : 'email';
-        const to = phone || email;
-
-        if (!to) {
-          throw new Error("No contact method (email or phone) found for this account.");
+        // If it is NOT a phone search (username, legacy name, or email), send the reset link to email directly
+        if (!isPhoneSearch) {
+          if (!email) {
+            throw new Error("No registered email address found for this account.");
+          }
+          await sendPasswordResetEmail(auth, email);
+          return {
+            success: true,
+            emailSent: true,
+            email,
+            phone: '',
+            uid,
+            otp: '',
+            isMigrated,
+            type: 'email' as const,
+            to: email
+          };
         }
 
-        // Send simulated message
+        // Generate OTP for phone search
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const type = 'sms' as const;
+        const to = phone;
+
+        if (!to) {
+          throw new Error("No phone number found for this account.");
+        }
+
+        // Send simulated SMS message
         setSimulatedMessage({
           type,
           to,
@@ -1023,6 +1050,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         return {
           success: true,
+          emailSent: false,
           type,
           to,
           otp,

@@ -246,6 +246,16 @@ export const MessagesScreen: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [clearingChat, setClearingChat] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
+
+  // Sync mobile view status with active friend selection
+  useEffect(() => {
+    if (activeChatFriendId) {
+      setMobileShowChat(true);
+    } else {
+      setMobileShowChat(false);
+    }
+  }, [activeChatFriendId]);
 
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -560,7 +570,7 @@ export const MessagesScreen: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[600px]">
 
         {/* --- LEFT PANEL: FRIENDS LIST & SEARCH --- */}
-        <div className="glass-card p-4 md:col-span-1 flex flex-col h-full overflow-hidden">
+        <div className={`glass-card p-4 md:col-span-1 flex flex-col h-full overflow-hidden ${mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
 
           {/* Section Header */}
           <div className="pb-3 border-b border-rpg-border/30">
@@ -650,13 +660,22 @@ export const MessagesScreen: React.FC = () => {
         </div>
 
         {/* --- RIGHT PANEL: CHAT WINDOW --- */}
-        <div className="glass-card md:col-span-2 flex flex-col h-full overflow-hidden relative">
+        <div className={`glass-card md:col-span-2 flex flex-col h-full overflow-hidden relative ${!mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
 
           {selectedFriend ? (
             <>
               {/* Chat Room Header */}
               <div className="p-4 border-b border-rpg-border/30 bg-slate-950/40 flex items-center justify-between z-10">
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setMobileShowChat(false);
+                      setActiveChatFriendId(null);
+                    }}
+                    className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer mr-1"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
                   <AvatarBuilder config={(friendProfile || selectedFriend).avatar} profilePicture={(friendProfile || selectedFriend).profilePicture} size={36} showCamera={false} />
                   <div>
                     <h4 className="text-sm font-bold text-white">{(friendProfile || selectedFriend).name}</h4>

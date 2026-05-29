@@ -172,6 +172,8 @@ interface AppContextType {
   login: (loginIdentifier: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, username: string, phone: string) => Promise<void>;
   googleSignIn: () => Promise<void>;
+  pendingGoogleUser: FirebaseUser | null;
+  completeGoogleSignUp: (name: string, username: string) => Promise<void>;
   logout: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   initiateForgotPassword: (identifier: string) => Promise<{
@@ -460,6 +462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [pendingGoogleUser, setPendingGoogleUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
   const [durationTarget, setDurationTarget] = useState(user.workoutDurationTarget || 60);
@@ -608,37 +611,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   if (activeScreen === 'auth') {
                     setScreen('dashboard');
                   }
+                  localStorage.setItem('lvl_uid', fUser.uid);
+                  setCurrentUid(fUser.uid);
                 } else {
-                  // No record exists in Firestore; initialize database and set screen to onboarding.
-                  const defaultUserData = {
-                    user: DEFAULT_USER,
-                    tasks: [],
-                    habits: [],
-                    quests: DEFAULT_QUESTS,
-                    achievements: DEFAULT_ACHIEVEMENTS,
-                    longTermPlans: [],
-                    fitnessLogs: []
-                  };
-                  await setDoc(docRef, defaultUserData);
-                  setUser(DEFAULT_USER);
-                  setTasks([]);
-                  setHabits([]);
-                  setQuests(DEFAULT_QUESTS);
-                  setAchievements(DEFAULT_ACHIEVEMENTS);
-                  setLongTermPlans([]);
-                  setFitnessLogs([]);
-                  setScreen('onboarding');
-
-                  localStorage.setItem(`lvl_${fUser.uid}_user`, JSON.stringify(DEFAULT_USER));
-                  localStorage.setItem(`lvl_${fUser.uid}_tasks`, JSON.stringify([]));
-                  localStorage.setItem(`lvl_${fUser.uid}_habits`, JSON.stringify([]));
-                  localStorage.setItem(`lvl_${fUser.uid}_quests`, JSON.stringify(DEFAULT_QUESTS));
-                  localStorage.setItem(`lvl_${fUser.uid}_achievements`, JSON.stringify(DEFAULT_ACHIEVEMENTS));
-                  localStorage.setItem(`lvl_${fUser.uid}_longTermPlans`, JSON.stringify([]));
-                  localStorage.setItem(`lvl_${fUser.uid}_fitnessLogs`, JSON.stringify([]));
+                  // No record exists in Firestore; set pendingGoogleUser to ask for name and username
+                  setPendingGoogleUser(fUser);
+                  setScreen('auth');
                 }
-                localStorage.setItem('lvl_uid', fUser.uid);
-                setCurrentUid(fUser.uid);
               }
             } catch (err) {
               console.error("Error loading Firestore data:", err);
@@ -863,57 +842,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       const googleSignIn = async () => {
-        const result = await signInWithPopup(auth, googleProvider);
-        const docRef = doc(db, 'users', result.user.uid);
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists()) {
-          // Create a clean unique username
-          let baseUsername = (result.user.displayName || 'hero')
-            .toLowerCase()
-            .replace(/[^a-z0-9_.]/g, '_');
+        await signInWithPopup(auth, googleProvider);
+      };
 
-          if (!baseUsername || baseUsername === '_') {
-            baseUsername = 'hero';
-          }
+      const completeGoogleSignUp = async (name: string, username: string) => {
+        if (!pendingGoogleUser) return;
 
-          let uniqueUsername = baseUsername;
-          let counter = 1;
-
-          const usersRef = collection(db, 'users');
-          let isUnique = false;
-
-          while (!isUnique) {
-            const q1 = query(usersRef, where('user.username', '==', uniqueUsername));
-            const snap1 = await getDocs(q1);
-
-            const q2 = query(usersRef, where('user.name', '==', uniqueUsername));
-            const snap2 = await getDocs(q2);
-
-            if (snap1.empty && snap2.empty) {
-              isUnique = true;
-            } else {
-              uniqueUsername = `${baseUsername}_${counter}`;
-              counter++;
-            }
-          }
-
-          const newUser = {
-            ...DEFAULT_USER,
-            name: result.user.displayName || 'Hero',
-            username: uniqueUsername,
-            email: result.user.email || '',
-            phone: result.user.phoneNumber || ''
-          };
-
-          await setDoc(docRef, {
-            user: newUser,
-            tasks: [],
-            habits: [],
-            quests: DEFAULT_QUESTS,
-            achievements: DEFAULT_ACHIEVEMENTS,
-            longTermPlans: []
-          });
+        // Check username uniqueness
+        const exists = await checkUsernameExists(username);
+        if (exists) {
+          throw new Error("This username is already taken by another Hero.");
         }
+
+        const uid = pendingGoogleUser.uid;
+        const docRef = doc(db, 'users', uid);
+
+        const newUser = {
+          ...DEFAULT_USER,
+          name: name.trim(),
+          username: username.trim().toLowerCase(),
+          email: pendingGoogleUser.email || '',
+          phone: pendingGoogleUser.phoneNumber || ''
+        };
+
+        const defaultUserData = {
+          user: newUser,
+          tasks: [],
+          habits: [],
+          quests: DEFAULT_QUESTS,
+          achievements: DEFAULT_ACHIEVEMENTS,
+          longTermPlans: [],
+          fitnessLogs: []
+        };
+
+        await setDoc(docRef, defaultUserData);
+
+        setUser(newUser);
+        setTasks([]);
+        setHabits([]);
+        setQuests(DEFAULT_QUESTS);
+        setAchievements(DEFAULT_ACHIEVEMENTS);
+        setLongTermPlans([]);
+        setFitnessLogs([]);
+
+        localStorage.setItem(`lvl_${uid}_user`, JSON.stringify(newUser));
+        localStorage.setItem(`lvl_${uid}_tasks`, JSON.stringify([]));
+        localStorage.setItem(`lvl_${uid}_habits`, JSON.stringify([]));
+        localStorage.setItem(`lvl_${uid}_quests`, JSON.stringify(DEFAULT_QUESTS));
+        localStorage.setItem(`lvl_${uid}_achievements`, JSON.stringify(DEFAULT_ACHIEVEMENTS));
+        localStorage.setItem(`lvl_${uid}_longTermPlans`, JSON.stringify([]));
+        localStorage.setItem(`lvl_${uid}_fitnessLogs`, JSON.stringify([]));
+
+        localStorage.setItem('lvl_uid', uid);
+        setCurrentUid(uid);
+        setFirebaseUser(pendingGoogleUser);
+        setPendingGoogleUser(null);
+        setScreen('onboarding');
       };
 
       const logout = async () => {
@@ -2173,6 +2157,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           login,
           register,
           googleSignIn,
+          pendingGoogleUser,
+          completeGoogleSignUp,
           logout,
           sendPasswordReset,
           initiateForgotPassword,

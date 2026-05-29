@@ -424,7 +424,11 @@ const LayoutWrapper: React.FC = () => {
       <SavedAccountsModal />
 
       {/* Floating Action Button (FAB) for AI Oracle */}
-      <div className="fixed bottom-20 md:bottom-8 right-6 z-50 flex flex-col items-center gap-1.5">
+      <div className={`fixed right-6 z-50 flex flex-col items-center gap-1.5 ${
+        activeScreen === 'messages' || activeScreen === 'chat'
+          ? 'bottom-36 md:bottom-8'
+          : 'bottom-20 md:bottom-8'
+      }`}>
         <span className="text-[9px] font-extrabold text-rpg-level uppercase tracking-widest bg-slate-950/90 px-2.5 py-0.5 rounded-full border border-rpg-level/30 shadow-md backdrop-blur-sm select-none animate-pulse">
           ASK AI
         </span>

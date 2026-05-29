@@ -12,10 +12,7 @@ export const AuthScreen: React.FC = () => {
     checkUsernameExists, 
     setSimulatedMessage,
     initiateForgotPassword,
-    resetPasswordWithOtp,
-    pendingGoogleUser,
-    completeGoogleSignUp,
-    logout
+    resetPasswordWithOtp
   } = useApp();
   const [isLogin, setIsLogin] = useState(true);
   const [showForgot, setShowForgot] = useState(false);
@@ -52,74 +49,7 @@ export const AuthScreen: React.FC = () => {
   const [forgotIsMigrated, setForgotIsMigrated] = useState(false);
   const [countryCode, setCountryCode] = useState('+91');
   
-  useEffect(() => {
-    if (pendingGoogleUser) {
-      setName(pendingGoogleUser.displayName || '');
-      const base = (pendingGoogleUser.displayName || pendingGoogleUser.email?.split('@')[0] || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9_.]/g, '_');
-      setUsername(base);
-      setError(null);
-    }
-  }, [pendingGoogleUser]);
 
-  const handleGoogleCompleteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    
-    if (!name.trim()) {
-      setError("Name is required to forge a new account.");
-      setLoading(false);
-      return;
-    }
-
-    if (!username.trim()) {
-      setError("Username is required to forge a new account.");
-      setLoading(false);
-      return;
-    }
-    
-    if (/\s/.test(username)) {
-      setError("Username cannot contain spaces.");
-      setLoading(false);
-      return;
-    }
-
-    if (/[A-Z]/.test(username)) {
-      setError("Username must be in lowercase (small) letters only.");
-      setLoading(false);
-      return;
-    }
-
-    const usernameRegex = /^[a-z0-9_.\-@!#$%^&*()+=~`{}|[\]\\:;"'<>,.?/]+$/;
-    if (!usernameRegex.test(username)) {
-      setError("Username contains invalid characters.");
-      setLoading(false);
-      return;
-    }
-
-    if (usernameStatus === 'taken') {
-      setError("This username is already taken by another Hero.");
-      setLoading(false);
-      return;
-    }
-
-    if (usernameStatus === 'checking') {
-      setError("Checking username availability...");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      await completeGoogleSignUp(name.trim(), username.trim().toLowerCase());
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to complete Google Sign Up.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     let interval: any;
@@ -727,91 +657,6 @@ Once you reset your password, log in with it and the app will automatically migr
               </form>
             )}
           </div>
-        ) : pendingGoogleUser ? (
-          /* Google Complete Registration Flow */
-          <form onSubmit={handleGoogleCompleteSubmit} className="space-y-4">
-            <h2 className="text-lg font-bold text-white mb-1">Forge Hero Profile</h2>
-            <p className="text-xs text-slate-400 leading-relaxed mb-3">
-              Complete your registration by choosing your name and a unique username.
-            </p>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Name</label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Ashok Kumar"
-                  className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950/50 border border-rpg-border/60 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-rpg-xp focus:ring-1 focus:ring-rpg-xp/40 transition-all"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Username</label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. ashok_k"
-                  className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950/50 border border-rpg-border/60 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-rpg-xp focus:ring-1 focus:ring-rpg-xp/40 transition-all"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-              {usernameStatus === 'checking' && (
-                <span className="text-[10px] font-semibold text-rpg-level mt-1 block">
-                  ⏳ Checking username availability...
-                </span>
-              )}
-              {usernameStatus === 'available' && (
-                <span className="text-[10px] font-semibold text-emerald-400 mt-1 block">
-                  ✅ Username is available!
-                </span>
-              )}
-              {usernameStatus === 'taken' && (
-                <span className="text-[10px] font-semibold text-rose-400 mt-1 block">
-                  ⚠️ this username already used or existed
-                </span>
-              )}
-              {usernameStatus === 'invalid' && (
-                <span className="text-[10px] font-semibold text-amber-500 mt-1 block">
-                  ⚠️ Must be small letters only, no uppercase or spaces. Special symbols are allowed.
-                </span>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 mt-2 rounded-xl bg-gradient-to-r from-rpg-xp to-rpg-level text-white font-bold text-sm shadow-lg shadow-rpg-level/25 hover:opacity-90 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Forging Profile...
-                </>
-              ) : (
-                'Forge Profile & Enter'
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={async () => {
-                setError(null);
-                await logout();
-              }}
-              className="w-full py-2.5 rounded-xl border border-rpg-border/40 hover:bg-slate-900 text-slate-400 text-xs font-bold transition-all"
-            >
-              Cancel
-            </button>
-          </form>
         ) : (
           /* Login / Signup Flow */
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -4,7 +4,7 @@ import type { FriendInfo } from '../context/AppContext';
 import { AvatarBuilder } from '../components/AvatarBuilder';
 import { Send, Search, UserPlus, MessageSquare, Loader2, AlertCircle, ArrowLeft, Plus, Check, MoreVertical, Trash2, User, X, TrendingUp, Share2, Copy } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, doc, deleteDoc, getDocs, getDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, doc, deleteDoc, getDocs, getDoc, where } from 'firebase/firestore';
 
 interface Message {
   id: string;
@@ -247,6 +247,89 @@ export const MessagesScreen: React.FC = () => {
   const [clearingChat, setClearingChat] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [searchResults, setSearchResults] = useState<FriendInfo[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Real-time user search in Firestore
+  useEffect(() => {
+    const searchQ = friendUsername.trim().toLowerCase();
+    if (!searchQ) {
+      setSearchResults([]);
+      setSearchError('');
+      return;
+    }
+
+    setSearching(true);
+    setSearchError('');
+
+    const delayDebounce = setTimeout(async () => {
+      try {
+        const usersRef = collection(db, 'users');
+        let q;
+        if (searchQ.length >= 2) {
+          q = query(
+            usersRef,
+            where('user.username', '>=', searchQ),
+            where('user.username', '<=', searchQ + '\uf8ff')
+          );
+        } else {
+          q = query(
+            usersRef,
+            where('user.username', '==', searchQ)
+          );
+        }
+
+        const querySnapshot = await getDocs(q);
+        const results: FriendInfo[] = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (doc.id !== firebaseUser?.uid && data.user) {
+            results.push({
+              uid: doc.id,
+              name: data.user.name || 'Hero',
+              username: data.user.username || '',
+              avatar: data.user.avatar,
+              profilePicture: data.user.profilePicture || ''
+            });
+          }
+        });
+
+        // Search by legacy name if no username matches
+        if (results.length === 0) {
+          const qName = query(
+            usersRef,
+            where('user.name', '==', friendUsername.trim())
+          );
+          const nameSnapshot = await getDocs(qName);
+          nameSnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (doc.id !== firebaseUser?.uid && data.user && !results.some(r => r.uid === doc.id)) {
+              results.push({
+                uid: doc.id,
+                name: data.user.name || 'Hero',
+                username: data.user.username || '',
+                avatar: data.user.avatar,
+                profilePicture: data.user.profilePicture || ''
+              });
+            }
+          });
+        }
+
+        setSearchResults(results);
+        if (results.length === 0) {
+          setSearchError('No matching heroes found.');
+        }
+      } catch (err) {
+        console.error('Search error:', err);
+        setSearchError('Failed to search users.');
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [friendUsername, firebaseUser]);
 
   // Sync mobile view status with active friend selection
   useEffect(() => {
@@ -512,6 +595,20 @@ export const MessagesScreen: React.FC = () => {
     }
   };
 
+  const handleQuickAddFriend = async (targetUsername: string) => {
+    setSearchLoading(true);
+    setSearchError('');
+    setSearchSuccess('');
+    try {
+      await addFriendByUsername(targetUsername);
+      setSearchSuccess(`Hero @${targetUsername} added to your guild!`);
+    } catch (err: any) {
+      setSearchError(err.message || 'Could not add friend.');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   // Handle sending message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -591,17 +688,33 @@ export const MessagesScreen: React.FC = () => {
                 className="w-full pl-9 pr-9 py-2.5 bg-slate-950 border border-rpg-border/60 rounded-xl text-white placeholder-slate-700 text-xs font-semibold focus:outline-none focus:border-rpg-level transition-all"
               />
               <Search className="absolute left-3 w-4 h-4 text-slate-600" />
-              <button
-                type="submit"
-                disabled={searchLoading || !friendUsername.trim()}
-                className="absolute right-2 p-1.5 rounded-lg bg-rpg-level/10 hover:bg-rpg-level hover:text-white border border-rpg-level/20 text-rpg-level transition-all disabled:opacity-50"
-              >
-                {searchLoading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <UserPlus className="w-3.5 h-3.5" />
-                )}
-              </button>
+              {friendUsername.trim() !== '' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFriendUsername('');
+                    setSearchSuccess('');
+                    setSearchError('');
+                  }}
+                  className="absolute right-3 p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 transition-all cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={searchLoading || !friendUsername.trim()}
+                  className="absolute right-2 p-1.5 rounded-lg bg-rpg-level/10 hover:bg-rpg-level hover:text-white border border-rpg-level/20 text-rpg-level transition-all disabled:opacity-50"
+                  title="Add direct friend"
+                >
+                  {searchLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <UserPlus className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Feedback messages */}
@@ -620,40 +733,105 @@ export const MessagesScreen: React.FC = () => {
 
           {/* Friends List Container */}
           <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 no-scrollbar">
-            {friendsList.length === 0 ? (
-              <div className="text-center py-8 text-slate-600 text-xs font-semibold border border-dashed border-rpg-border/40 rounded-xl px-2">
-                🤝 Your guild list is empty. Add a friend using their username above!
-              </div>
-            ) : (
-              friendsList.map((friend) => {
-                const active = activeChatFriendId === friend.uid;
-                const currentFriend = friendsProfiles[friend.uid] || friend;
-                const count = unreadCounts[friend.uid] || 0;
-                return (
-                  <div
-                    key={friend.uid}
-                    onClick={() => handleSelectFriend(friend)}
-                    className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer select-none transition-all ${
-                      active
-                        ? 'bg-gradient-to-r from-rpg-level/15 to-indigo-950/20 border-rpg-level/50 shadow'
-                        : 'bg-slate-950/40 border-rpg-border/30 hover:border-rpg-border/70 hover:bg-slate-950/70'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 truncate flex-1">
-                      <AvatarBuilder config={currentFriend.avatar} profilePicture={currentFriend.profilePicture} size={32} showCamera={false} />
-                      <div className="truncate flex-1">
-                        <div className="text-xs font-bold text-white truncate">{currentFriend.name}</div>
-                        <div className="text-[10px] font-semibold text-slate-500">@{currentFriend.username}</div>
-                      </div>
-                    </div>
-                    {count > 0 && (
-                      <span className="flex-shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-[9px] font-black rounded-full shadow animate-pulse">
-                        {count}
-                      </span>
-                    )}
+            {friendUsername.trim() !== '' ? (
+              // Search Results
+              searching ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-500 text-xs font-bold">
+                  <Loader2 className="w-5 h-5 animate-spin text-rpg-level" />
+                  <span>Searching the guild registry...</span>
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-xs font-semibold border border-dashed border-rpg-border/30 rounded-xl px-2">
+                  🔍 No heroes found matching "{friendUsername}"
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-1 mb-2">
+                    Search Results ({searchResults.length})
                   </div>
-                );
-              })
+                  {searchResults.map((result) => {
+                    const isFriend = friendsList.some(f => f.uid === result.uid);
+                    const active = activeChatFriendId === result.uid;
+                    return (
+                      <div
+                        key={result.uid}
+                        onClick={() => {
+                          if (isFriend) {
+                            handleSelectFriend(result);
+                          }
+                        }}
+                        className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer select-none transition-all ${
+                          active
+                            ? 'bg-gradient-to-r from-rpg-level/15 to-indigo-950/20 border-rpg-level/50 shadow'
+                            : 'bg-slate-950/40 border-rpg-border/30 hover:border-rpg-border/70 hover:bg-slate-950/70'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 truncate flex-1">
+                          <AvatarBuilder config={result.avatar} profilePicture={result.profilePicture} size={32} showCamera={false} />
+                          <div className="truncate flex-1">
+                            <div className="text-xs font-bold text-white truncate">{result.name}</div>
+                            <div className="text-[10px] font-semibold text-slate-500">@{result.username}</div>
+                          </div>
+                        </div>
+                        
+                        {isFriend ? (
+                          <span className="text-[9px] font-black text-slate-400 bg-slate-900 border border-rpg-border/30 px-2 py-0.5 rounded-lg select-none">
+                            Guild Joined
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuickAddFriend(result.username);
+                            }}
+                            className="px-2.5 py-1 text-[10px] font-bold bg-rpg-level/10 hover:bg-rpg-level text-rpg-level hover:text-white border border-rpg-level/30 rounded-lg transition-all flex items-center gap-1 active:scale-95 cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Add
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            ) : (
+              // Standard Friends List
+              friendsList.length === 0 ? (
+                <div className="text-center py-8 text-slate-600 text-xs font-semibold border border-dashed border-rpg-border/40 rounded-xl px-2">
+                  🤝 Your guild list is empty. Add a friend using their username above!
+                </div>
+              ) : (
+                friendsList.map((friend) => {
+                  const active = activeChatFriendId === friend.uid;
+                  const currentFriend = friendsProfiles[friend.uid] || friend;
+                  const count = unreadCounts[friend.uid] || 0;
+                  return (
+                    <div
+                      key={friend.uid}
+                      onClick={() => handleSelectFriend(friend)}
+                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer select-none transition-all ${
+                        active
+                          ? 'bg-gradient-to-r from-rpg-level/15 to-indigo-950/20 border-rpg-level/50 shadow'
+                          : 'bg-slate-950/40 border-rpg-border/30 hover:border-rpg-border/70 hover:bg-slate-950/70'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 truncate flex-1">
+                        <AvatarBuilder config={currentFriend.avatar} profilePicture={currentFriend.profilePicture} size={32} showCamera={false} />
+                        <div className="truncate flex-1">
+                          <div className="text-xs font-bold text-white truncate">{currentFriend.name}</div>
+                          <div className="text-[10px] font-semibold text-slate-500">@{currentFriend.username}</div>
+                        </div>
+                      </div>
+                      {count > 0 && (
+                        <span className="flex-shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-[9px] font-black rounded-full shadow animate-pulse">
+                          {count}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
+              )
             )}
           </div>
 

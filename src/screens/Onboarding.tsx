@@ -1,65 +1,140 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Sparkles, Moon, Sun, Briefcase, Dumbbell, BookOpen, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Sparkles, User, Shield, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 
 export const Onboarding: React.FC = () => {
-  const { completeOnboarding } = useApp();
+  const { user, checkUsernameExists, completeOnboarding } = useApp();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [wakeTime, setWakeTime] = useState('06:00');
-  const [sleepTime, setSleepTime] = useState('22:00');
-  const [studyWorkHours, setStudyWorkHours] = useState('09:00-17:00');
-  const [focusGoals, setFocusGoals] = useState<string[]>([]);
-  const [selectedHabits, setSelectedHabits] = useState<string[]>([
-    'Drink 2500ml Water',
-    '30 Mins Daily Meditation'
-  ]);
-  const [fitnessGoal, setFitnessGoal] = useState('active');
+  const [username, setUsername] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const habitTemplates = [
-    { name: 'Drink 2500ml Water', desc: 'Hydration Quest', category: 'health' },
-    { name: 'Go to Gym / Workout', desc: 'Strength Training', category: 'fitness' },
-    { name: '30 Mins Daily Meditation', desc: 'Mental Clarity', category: 'mind' },
-    { name: 'Read 10 Pages of Book', desc: 'Knowledge Buff', category: 'mind' },
-    { name: 'Write Code / Project Work', desc: 'Craft Enhancement', category: 'work' },
-    { name: 'Review Daily Time Blocks', desc: 'Focus Mastery', category: 'work' },
-    { name: 'Sleep Before 11 PM', desc: 'Rest & Recover', category: 'health' }
-  ];
+  // Initialize name and username based on default created user values (e.g. from Google info)
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setUsername(user.username || '');
+    }
+  }, [user]);
 
-  const goalTemplates = [
-    { id: 'fitness', name: 'Physical Conditioning', desc: 'Improve fitness, endurance, and physical power', icon: <Dumbbell className="w-5 h-5 text-emerald-400" /> },
-    { id: 'mind', name: 'Mental Fortitude', desc: 'Practice meditation, reading, and mental clarity', icon: <BookOpen className="w-5 h-5 text-indigo-400" /> },
-    { id: 'career', name: 'Professional Slaying', desc: 'Advance career skills, writing code, and learning', icon: <Briefcase className="w-5 h-5 text-violet-400" /> }
-  ];
+  // Real-time username check
+  useEffect(() => {
+    if (!username) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    if (/\s/.test(username)) {
+      setUsernameStatus('invalid');
+      return;
+    }
+
+    if (/[A-Z]/.test(username)) {
+      setUsernameStatus('invalid');
+      return;
+    }
+
+    const usernameRegex = /^[a-z0-9_.\-@!#$%^&*()+=~`{}|[\]\\:;"'<>,.?/]+$/;
+    if (!usernameRegex.test(username)) {
+      setUsernameStatus('invalid');
+      return;
+    }
+
+    setUsernameStatus('checking');
+
+    const delayDebounce = setTimeout(async () => {
+      try {
+        const exists = await checkUsernameExists(username);
+        if (exists) {
+          setUsernameStatus('taken');
+        } else {
+          setUsernameStatus('available');
+        }
+      } catch (err) {
+        console.error(err);
+        setUsernameStatus('idle');
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounce);
+  }, [username, checkUsernameExists]);
 
   const handleNext = () => {
-    if (step < 4) setStep(step + 1);
-    else {
-      completeOnboarding({
-        name: name || 'Hero',
-        wakeTime,
-        sleepTime,
-        focusGoals,
-        selectedHabits,
-        studyWorkHours
-      });
+    setError(null);
+    if (!name.trim()) {
+      setError('Please enter your name.');
+      return;
     }
+    setStep(2);
   };
 
   const handleBack = () => {
-    if (step > 1) setStep(step - 1);
+    setError(null);
+    setStep(1);
   };
 
-  const toggleGoal = (goalId: string) => {
-    setFocusGoals(prev => 
-      prev.includes(goalId) ? prev.filter(g => g !== goalId) : [...prev, goalId]
-    );
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
 
-  const toggleHabit = (habitName: string) => {
-    setSelectedHabits(prev => 
-      prev.includes(habitName) ? prev.filter(h => h !== habitName) : [...prev, habitName]
-    );
+    const cleanName = name.trim();
+    const cleanUsername = username.trim().toLowerCase();
+
+    if (!cleanName) {
+      setError("Name is required to forge your account.");
+      setLoading(false);
+      return;
+    }
+
+    if (!cleanUsername) {
+      setError("Username is required to forge your account.");
+      setLoading(false);
+      return;
+    }
+
+    if (/\s/.test(cleanUsername)) {
+      setError("Username cannot contain spaces.");
+      setLoading(false);
+      return;
+    }
+
+    if (/[A-Z]/.test(cleanUsername)) {
+      setError("Username must be in lowercase only.");
+      setLoading(false);
+      return;
+    }
+
+    const usernameRegex = /^[a-z0-9_.\-@!#$%^&*()+=~`{}|[\]\\:;"'<>,.?/]+$/;
+    if (!usernameRegex.test(cleanUsername)) {
+      setError("Username contains invalid characters.");
+      setLoading(false);
+      return;
+    }
+
+    if (usernameStatus === 'taken') {
+      setError("This username is already taken by another Hero.");
+      setLoading(false);
+      return;
+    }
+
+    if (usernameStatus === 'checking') {
+      setError("Checking username availability...");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Complete onboarding and enter dashboard
+      await completeOnboarding(cleanName, cleanUsername);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to update your Hero profile.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,15 +144,28 @@ export const Onboarding: React.FC = () => {
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-rpg-level/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Onboarding Panel */}
-      <div className="w-full max-w-lg p-8 rounded-3xl border border-rpg-border/30 bg-rpg-card/40 backdrop-blur-xl shadow-glass flex flex-col relative z-10">
+      <div className="w-full max-w-md p-8 rounded-3xl border border-rpg-border/30 bg-rpg-card/40 backdrop-blur-xl shadow-glass flex flex-col relative z-10">
         
+        {/* Logo/Icon */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rpg-xp to-rpg-level flex items-center justify-center shadow-lg shadow-rpg-level/20 mb-3">
+            <Shield className="w-7 h-7 text-white" />
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-white font-sans">
+            LevelUp Life
+          </h1>
+          <p className="text-[10px] font-bold text-rpg-level uppercase tracking-widest mt-1">
+            Forge Your Hero Identity
+          </p>
+        </div>
+
         {/* Progress Dots */}
         <div className="flex items-center justify-between mb-8">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-            Step {step} of 4
+            Step {step} of 2
           </span>
           <div className="flex gap-2">
-            {[1, 2, 3, 4].map(idx => (
+            {[1, 2].map(idx => (
               <div 
                 key={idx} 
                 className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -88,215 +176,133 @@ export const Onboarding: React.FC = () => {
           </div>
         </div>
 
-        {/* Step 1: Nickname */}
-        {step === 1 && (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                Create Your Hero Profile <Sparkles className="w-6 h-6 text-rpg-gold animate-pulse" />
-              </h2>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Welcome to LevelUp Life. Choose your hero name to start mapping your daily quests.
-              </p>
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Hero Nickname</label>
-              <input
-                type="text"
-                placeholder="e.g. AlexTheGreat"
-                className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-rpg-border/60 text-white placeholder-slate-700 font-medium focus:outline-none focus:border-rpg-discipline focus:ring-1 focus:ring-rpg-discipline/30 transition-all"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
+        {/* Error Alert Box */}
+        {error && (
+          <div className="p-3 rounded-xl bg-red-950/20 border border-red-500/30 text-red-400 text-xs font-semibold leading-relaxed mb-4">
+            ⚠️ {error}
           </div>
         )}
 
-        {/* Step 2: Sleep & Work Times */}
-        {step === 2 && (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white tracking-tight">
-                Establish Your Routine Cycle
-              </h2>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Schedules help the AI build time blocks. Tell us when you wake, sleep, and do deep focus.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                  <Sun className="w-3.5 h-3.5 text-rpg-gold" /> Wake-Up
-                </label>
-                <input
-                  type="time"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950/60 border border-rpg-border/60 text-white font-medium focus:outline-none focus:border-rpg-discipline transition-all"
-                  value={wakeTime}
-                  onChange={(e) => setWakeTime(e.target.value)}
-                />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Step 1: NAME */}
+          {step === 1 && (
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                  What is your Name? <Sparkles className="w-5 h-5 text-rpg-gold animate-pulse" />
+                </h2>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Enter the name that other heroes in the guild will see. You can change this later.
+                </p>
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                  <Moon className="w-3.5 h-3.5 text-indigo-400" /> Bedtime
-                </label>
-                <input
-                  type="time"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950/60 border border-rpg-border/60 text-white font-medium focus:outline-none focus:border-rpg-discipline transition-all"
-                  value={sleepTime}
-                  onChange={(e) => setSleepTime(e.target.value)}
-                />
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Display Name</label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Ashok Kumar"
+                    className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950/50 border border-rpg-border/60 text-white placeholder-slate-700 text-sm focus:outline-none focus:border-rpg-discipline focus:ring-1 focus:ring-rpg-discipline/30 transition-all font-medium"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="px-6 py-2.5 rounded-xl bg-rpg-discipline text-slate-950 font-bold text-sm shadow-lg shadow-rpg-discipline/25 hover:opacity-90 hover:scale-[1.01] active:scale-95 transition-all flex items-center gap-1"
+                >
+                  Continue <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                Work/Study Focus Window
-              </label>
-              <select
-                className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-rpg-border/60 text-white font-medium focus:outline-none focus:border-rpg-discipline transition-all"
-                value={studyWorkHours}
-                onChange={(e) => setStudyWorkHours(e.target.value)}
-              >
-                <option value="09:00-17:00">Standard Workday (9 AM - 5 PM)</option>
-                <option value="08:00-13:00">Morning Shift (8 AM - 1 PM)</option>
-                <option value="13:00-18:00">Afternoon Shift (1 PM - 6 PM)</option>
-                <option value="20:00-24:00">Night Owl Focus (8 PM - Midnight)</option>
-                <option value="none">No set work schedule (Flexible)</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Life Goals & Fitness */}
-        {step === 3 && (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white tracking-tight">
-                Select Your Life Paths
-              </h2>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Choose the attributes you want to maximize. Completing habits in these paths awards category multipliers.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {goalTemplates.map(goal => {
-                const selected = focusGoals.includes(goal.id);
-                return (
-                  <button
-                    key={goal.id}
-                    type="button"
-                    onClick={() => toggleGoal(goal.id)}
-                    className={`w-full p-4 rounded-xl border text-left flex items-start gap-4 transition-all ${
-                      selected 
-                        ? 'bg-rpg-discipline/10 border-rpg-discipline' 
-                        : 'bg-slate-950/40 border-rpg-border/50 hover:bg-slate-950/70'
-                    }`}
-                  >
-                    <div className="mt-0.5">{goal.icon}</div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white">{goal.name}</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">{goal.desc}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                Fitness Orientation
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {['Active Lifestyle', 'Muscle Gain', 'Cardio Endurance', 'General Health'].map((fit) => {
-                  const id = fit.toLowerCase().split(' ')[0];
-                  return (
-                    <button
-                      key={fit}
-                      type="button"
-                      onClick={() => setFitnessGoal(id)}
-                      className={`py-2 px-3 rounded-lg border text-xs font-semibold transition-all ${
-                        fitnessGoal === id 
-                          ? 'bg-rpg-discipline text-slate-900 border-rpg-discipline' 
-                          : 'bg-slate-900 border-rpg-border/40 text-slate-400'
-                      }`}
-                    >
-                      {fit}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Habits Tracker selection */}
-        {step === 4 && (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white tracking-tight">
-                Select Your Starting Habits
-              </h2>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Choose the daily rituals you wish to track. Consistency forms streaks and upgrades your discipline score.
-              </p>
-            </div>
-
-            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              {habitTemplates.map((h, idx) => {
-                const checked = selectedHabits.includes(h.name);
-                return (
-                  <label
-                    key={idx}
-                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                      checked 
-                        ? 'bg-rpg-discipline/10 border-rpg-discipline' 
-                        : 'bg-slate-950/40 border-rpg-border/50 hover:bg-slate-950/70'
-                    }`}
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-white">{h.name}</span>
-                      <span className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5 font-bold">
-                        {h.desc}
-                      </span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleHabit(h.name)}
-                      className="w-4 h-4 rounded text-rpg-discipline focus:ring-rpg-discipline bg-slate-950 border-rpg-border/60"
-                    />
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Footer Navigation */}
-        <div className="flex justify-between items-center mt-8 pt-4 border-t border-rpg-border/30">
-          {step > 1 ? (
-            <button
-              type="button"
-              onClick={handleBack}
-              className="flex items-center gap-1 text-slate-400 hover:text-white font-bold text-sm transition-all"
-            >
-              <ChevronLeft className="w-4 h-4" /> Back
-            </button>
-          ) : (
-            <div />
           )}
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className="px-6 py-2.5 rounded-xl bg-rpg-discipline text-slate-950 font-bold text-sm shadow-lg shadow-rpg-discipline/25 hover:opacity-90 hover:scale-[1.01] active:scale-95 transition-all flex items-center gap-1.5"
-          >
-            {step === 4 ? 'Generate Life Routine' : 'Continue'} <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+          {/* Step 2: USERNAME */}
+          {step === 2 && (
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <h2 className="text-xl font-black text-white tracking-tight">
+                  Choose a Unique Username
+                </h2>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  This username is how your friends will find and add you. It must be unique and in lowercase.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Unique Username</label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. ashok_k"
+                    className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950/50 border border-rpg-border/60 text-white placeholder-slate-700 text-sm focus:outline-none focus:border-rpg-discipline focus:ring-1 focus:ring-rpg-discipline/30 transition-all font-medium"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+                
+                {/* Real-time feedback */}
+                {usernameStatus === 'checking' && (
+                  <span className="text-[10px] font-semibold text-rpg-level mt-1 block">
+                    ⏳ Checking username availability...
+                  </span>
+                )}
+                {usernameStatus === 'available' && (
+                  <span className="text-[10px] font-semibold text-emerald-400 mt-1 block">
+                    ✅ Username is available!
+                  </span>
+                )}
+                {usernameStatus === 'taken' && (
+                  <span className="text-[10px] font-semibold text-rose-400 mt-1 block">
+                    ⚠️ this username already used or existed
+                  </span>
+                )}
+                {usernameStatus === 'invalid' && (
+                  <span className="text-[10px] font-semibold text-amber-500 mt-1 block">
+                    ⚠️ Must be small letters only, no uppercase or spaces. Special symbols are allowed.
+                  </span>
+                )}
+              </div>
+
+              {/* Navigation buttons */}
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  disabled={loading}
+                  className="flex items-center gap-1 text-slate-400 hover:text-white font-bold text-sm transition-all disabled:opacity-50"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Back
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rpg-xp to-rpg-level text-white font-bold text-sm shadow-lg shadow-rpg-level/25 hover:opacity-90 hover:scale-[1.01] active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Forging...
+                    </>
+                  ) : (
+                    <>
+                      Forge Profile & Enter <Sparkles className="w-4 h-4 animate-pulse" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </form>
       </div>
     </div>
   );

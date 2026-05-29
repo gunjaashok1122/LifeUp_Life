@@ -55,6 +55,7 @@ export interface UserProfile {
   caloriesTarget?: number;
   workoutDurationTarget?: number;
   password?: string;
+  onboardingCompleted?: boolean;
 }
 
 export interface TaskBlock {
@@ -217,14 +218,7 @@ interface AppContextType {
   toggleHabit: (id: string, date: string) => void;
   deleteHabit: (id: string) => void;
   // Onboarding Actions
-  completeOnboarding: (data: {
-    name: string;
-    wakeTime: string;
-    sleepTime: string;
-    focusGoals: string[];
-    selectedHabits: string[];
-    studyWorkHours: string;
-  }) => void;
+  completeOnboarding: (name: string, username: string) => Promise<void>;
   // RPG Actions
   purchaseItem: (itemId: string) => boolean;
   equipAvatarItem: (category: keyof AvatarConfig, value: string) => void;
@@ -563,7 +557,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
                 checkDailyReset(u);
                 setCurrentUid(fUser.uid);
-                if (activeScreen === 'auth') {
+                if (u && u.onboardingCompleted === false) {
+                  setScreen('onboarding');
+                } else if (activeScreen === 'auth') {
                   setScreen('dashboard');
                 }
               } else {
@@ -608,15 +604,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   }
 
                   if (data.user) checkDailyReset(data.user);
-                  if (activeScreen === 'auth') {
+                  if (data.user && data.user.onboardingCompleted === false) {
+                    setScreen('onboarding');
+                  } else if (activeScreen === 'auth' || activeScreen === 'onboarding') {
                     setScreen('dashboard');
                   }
                   localStorage.setItem('lvl_uid', fUser.uid);
                   setCurrentUid(fUser.uid);
                 } else {
-                  // No record exists in Firestore; set pendingGoogleUser to ask for name and username
-                  setPendingGoogleUser(fUser);
-                  setScreen('auth');
+                  // No record exists in Firestore; initialize database and set screen to onboarding.
+                  const defaultName = fUser.displayName || 'Hero';
+                  const baseUsername = defaultName.toLowerCase().replace(/[^a-z0-9_.]/g, '_') || 'hero';
+                  
+                  const newUser = {
+                    ...DEFAULT_USER,
+                    name: defaultName,
+                    username: baseUsername,
+                    email: fUser.email || '',
+                    phone: fUser.phoneNumber || '',
+                    onboardingCompleted: false
+                  };
+
+                  const defaultUserData = {
+                    user: newUser,
+                    tasks: [],
+                    habits: [],
+                    quests: DEFAULT_QUESTS,
+                    achievements: DEFAULT_ACHIEVEMENTS,
+                    longTermPlans: [],
+                    fitnessLogs: []
+                  };
+                  await setDoc(docRef, defaultUserData);
+                  setUser(newUser);
+                  setTasks([]);
+                  setHabits([]);
+                  setQuests(DEFAULT_QUESTS);
+                  setAchievements(DEFAULT_ACHIEVEMENTS);
+                  setLongTermPlans([]);
+                  setFitnessLogs([]);
+                  setScreen('onboarding');
+
+                  localStorage.setItem(`lvl_${fUser.uid}_user`, JSON.stringify(newUser));
+                  localStorage.setItem(`lvl_${fUser.uid}_tasks`, JSON.stringify([]));
+                  localStorage.setItem(`lvl_${fUser.uid}_habits`, JSON.stringify([]));
+                  localStorage.setItem(`lvl_${fUser.uid}_quests`, JSON.stringify(DEFAULT_QUESTS));
+                  localStorage.setItem(`lvl_${fUser.uid}_achievements`, JSON.stringify(DEFAULT_ACHIEVEMENTS));
+                  localStorage.setItem(`lvl_${fUser.uid}_longTermPlans`, JSON.stringify([]));
+                  localStorage.setItem(`lvl_${fUser.uid}_fitnessLogs`, JSON.stringify([]));
+                  
+                  localStorage.setItem('lvl_uid', fUser.uid);
+                  setCurrentUid(fUser.uid);
                 }
               }
             } catch (err) {
@@ -824,13 +861,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Register in Firebase Auth with master password
         const userCredential = await createUserWithEmailAndPassword(auth, email, FIREBASE_MASTER_PASSWORD);
         const newUser = {
-          ...DEFAULT_USER,
-          name: name.trim(),
-          username: username,
-          email: email,
-          phone: normalizedPhone,
-          password: password // Store custom password in Firestore
-        };
+           ...DEFAULT_USER,
+           name: name.trim(),
+           username: username,
+           email: email,
+           phone: normalizedPhone,
+           password: password, // Store custom password in Firestore
+           onboardingCompleted: true
+         };
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           user: newUser,
           tasks: [],
@@ -862,7 +900,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           name: name.trim(),
           username: username.trim().toLowerCase(),
           email: pendingGoogleUser.email || '',
-          phone: pendingGoogleUser.phoneNumber || ''
+          phone: pendingGoogleUser.phoneNumber || '',
+          onboardingCompleted: true
         };
 
         const defaultUserData = {
@@ -897,7 +936,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentUid(uid);
         setFirebaseUser(pendingGoogleUser);
         setPendingGoogleUser(null);
-        setScreen('onboarding');
+        setScreen('dashboard');
       };
 
       const logout = async () => {
@@ -1686,146 +1725,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       // --- Onboarding Function ---
-      const completeOnboarding = (data: {
-        name: string;
-        wakeTime: string;
-        sleepTime: string;
-        focusGoals: string[];
-        selectedHabits: string[];
-        studyWorkHours: string;
-      }) => {
-        // 1. Update user info
-        setUser(prev => ({
-          ...prev,
-          name: data.name,
-          streak: 1,
-          level: 1,
-          xp: 0,
-          coins: 80 // bonus starting gold!
-        }));
+      const completeOnboarding = async (name: string, username: string) => {
+         const cleanName = name.trim();
+         const cleanUsername = username.trim().toLowerCase();
 
-        // 2. Generate Daily Schedules based on sleep/wake times and study schedules
-        const generatedTasks: TaskBlock[] = [];
+         await updateName(cleanName);
+         await updateUsername(cleanUsername);
 
-        // Add default routines relative to wake and sleep
-        const wakeHour = parseInt(data.wakeTime.split(':')[0]);
-        const sleepHour = parseInt(data.sleepTime.split(':')[0]);
-
-        const formatTime = (h: number, m: number = 0) => {
-          const hh = String(h % 24).padStart(2, '0');
-          const mm = String(m).padStart(2, '0');
-          return `${hh}:${mm}`;
-        };
-
-        // Wake Routine
-        generatedTasks.push({
-          id: 'task-wake',
-          title: '🌅 Rise & Shine Routine',
-          startTime: formatTime(wakeHour),
-          endTime: formatTime(wakeHour, 30),
-          completed: false,
-          priority: 'low',
-          category: 'routine',
-          color: '#fbbf24',
-          recurring: true
-        });
-
-        // Healthy Breakfast & Hydrate
-        generatedTasks.push({
-          id: 'task-breakfast',
-          title: '🥛 Breakfast & Hydration Quest',
-          startTime: formatTime(wakeHour + 1),
-          endTime: formatTime(wakeHour + 1, 30),
-          completed: false,
-          priority: 'low',
-          category: 'health' as any,
-          color: '#60a5fa',
-          recurring: true
-        });
-
-        // Work / Study blocks
-        if (data.studyWorkHours) {
-          const [startW] = data.studyWorkHours.split('-');
-          const startWHour = startW ? parseInt(startW) : wakeHour + 2;
-
-          generatedTasks.push({
-            id: 'task-work1',
-            title: '⚔️ Deep Work / Study Block 1',
-            startTime: formatTime(startWHour),
-            endTime: formatTime(startWHour + 2),
-            completed: false,
-            priority: 'high',
-            category: 'work',
-            color: '#8b5cf6',
-            recurring: true
-          });
-
-          generatedTasks.push({
-            id: 'task-work2',
-            title: '🏹 Deep Work / Study Block 2',
-            startTime: formatTime(startWHour + 3),
-            endTime: formatTime(startWHour + 5),
-            completed: false,
-            priority: 'medium',
-            category: 'work',
-            color: '#8b5cf6',
-            recurring: true
-          });
-        }
-
-        // Health/Fitness schedule
-        if (data.focusGoals.includes('fitness')) {
-          generatedTasks.push({
-            id: 'task-fitness',
-            title: '🏃 Fitness Training (Gym/Cardio)',
-            startTime: formatTime(sleepHour - 4),
-            endTime: formatTime(sleepHour - 3),
-            completed: false,
-            priority: 'high',
-            category: 'fitness',
-            color: '#10b981',
-            recurring: true
-          });
-        }
-
-        // Bedtime routine
-        generatedTasks.push({
-          id: 'task-winddown',
-          title: '🧘 Zen Wind Down (Read / Meditate)',
-          startTime: formatTime(sleepHour - 1),
-          endTime: formatTime(sleepHour),
-          completed: false,
-          priority: 'medium',
-          category: 'routine',
-          color: '#a855f7',
-          recurring: true
-        });
-
-        setTasks(generatedTasks);
-
-        // 3. Setup onboarding habits
-        const onboardingHabits: Habit[] = data.selectedHabits.map((habitName) => {
-          let category: Habit['category'] = 'custom';
-          if (habitName.toLowerCase().includes('water') || habitName.toLowerCase().includes('sleep')) category = 'health';
-          else if (habitName.toLowerCase().includes('gym') || habitName.toLowerCase().includes('exercise')) category = 'fitness';
-          else if (habitName.toLowerCase().includes('meditat') || habitName.toLowerCase().includes('read')) category = 'mind';
-          else if (habitName.toLowerCase().includes('cod') || habitName.toLowerCase().includes('study')) category = 'work';
-
-          return {
-            id: Math.random().toString(36).substr(2, 9),
-            name: habitName,
-            category,
-            frequency: 'daily',
-            streak: 0,
-            bestStreak: 0,
-            completedDates: [],
-            createdAt: new Date().toISOString()
-          };
-        });
-
-        setHabits(onboardingHabits);
-        setScreen('dashboard');
-      };
+         setUser(prev => ({
+           ...prev,
+           onboardingCompleted: true
+         }));
+         setScreen('dashboard');
+       };
 
       // --- RPG Actions ---
       const purchaseItem = (itemId: string): boolean => {

@@ -18,7 +18,7 @@ export const AuthScreen: React.FC = () => {
   const [showForgot, setShowForgot] = useState(false);
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+91');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');

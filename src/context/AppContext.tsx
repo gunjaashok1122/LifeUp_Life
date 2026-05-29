@@ -1035,7 +1035,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Generate OTP for phone search
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const type = 'sms' as const;
-        const to = phone;
+        const to = normalizePhone(phone);
 
         if (!to) {
           throw new Error("No phone number found for this account.");

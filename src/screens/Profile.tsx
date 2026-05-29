@@ -135,6 +135,7 @@ export const Profile: React.FC = () => {
     sendPasswordReset, 
     setScreen,
     logout,
+    setShowLogoutConfirm,
     setShowSavedAccounts,
     setSimulatedMessage,
     updatePasswordInFirestore,
@@ -978,7 +979,7 @@ export const Profile: React.FC = () => {
         <div className="mt-3">
           {firebaseUser ? (
             <button
-              onClick={logout}
+              onClick={() => setShowLogoutConfirm(true)}
               className="w-full py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <LogOut className="w-4 h-4" /> Log Out

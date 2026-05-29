@@ -230,7 +230,9 @@ const LayoutWrapper: React.FC = () => {
     chatNotification, 
     setChatNotification, 
     setActiveChatFriendId,
-    logout
+    logout,
+    showLogoutConfirm,
+    setShowLogoutConfirm
   } = useApp();
 
   const longPressTimer = React.useRef<any>(null);
@@ -361,7 +363,7 @@ const LayoutWrapper: React.FC = () => {
 
               {/* Log Out */}
               <button
-                onClick={logout}
+                onClick={() => setShowLogoutConfirm(true)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 w-full text-left text-red-400/80 hover:bg-red-950/20 hover:text-red-400 border border-transparent cursor-pointer"
               >
                 <span className="flex-shrink-0 text-red-500/80">
@@ -398,6 +400,57 @@ const LayoutWrapper: React.FC = () => {
       <SimulatedMessageToast />
       <ChatNotificationToast />
       <SavedAccountsModal />
+
+      {/* Global Log Out Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div 
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div 
+            className="glass-card w-full max-w-sm p-6 border-red-500/20 flex flex-col items-center gap-4 relative bg-slate-950/95 shadow-2xl rounded-2xl text-center animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowLogoutConfirm(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-900 border border-rpg-border/40 text-slate-400 hover:text-white hover:border-white transition-all cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Modal Header */}
+            <div className="flex flex-col items-center">
+              <span className="text-3xl mb-1 select-none">⚔️</span>
+              <h3 className="text-lg font-black text-white mt-1">
+                Confirm Log Out
+              </h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-[240px]">
+                Are you sure you want to end your focus session and log out of your hero profile?
+              </p>
+            </div>
+
+            {/* Action Buttons: Cancel on Left, Logout on Right */}
+            <div className="grid grid-cols-2 gap-3 w-full mt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-rpg-border/40 text-slate-300 hover:text-white font-bold text-xs transition-all cursor-pointer active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  logout();
+                  setShowLogoutConfirm(false);
+                }}
+                className="py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition-all cursor-pointer shadow-lg shadow-red-600/20 active:scale-95"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

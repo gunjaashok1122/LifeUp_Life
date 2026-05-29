@@ -250,6 +250,8 @@ interface AppContextType {
   markChatAsRead: (friendUid: string) => void;
   chatNotification: { id: string; senderName: string; text: string; friendUid: string } | null;
   setChatNotification: (msg: { id: string; senderName: string; text: string; friendUid: string } | null) => void;
+  showLogoutConfirm: boolean;
+  setShowLogoutConfirm: (show: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -505,6 +507,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [chatNotification, setChatNotification] = useState<{ id: string; senderName: string; text: string; friendUid: string } | null>(null);
 
   const [simulatedMessage, setSimulatedMessage] = useState<{ type: 'sms' | 'email'; to: string; text: string } | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
 
   const updateFirestore = async (fields: Record<string, any>) => {
         if (!firebaseUser || authLoading) return;
@@ -2182,7 +2185,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setActiveChatFriendId,
           markChatAsRead,
           chatNotification,
-          setChatNotification
+          setChatNotification,
+          showLogoutConfirm,
+          setShowLogoutConfirm
         }}>
           {children}
         </AppContext.Provider>

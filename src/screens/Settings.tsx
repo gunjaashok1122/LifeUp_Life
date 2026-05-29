@@ -4,7 +4,7 @@ import { AvatarBuilder } from '../components/AvatarBuilder';
 import { Settings as SettingsIcon, User, Sun, Moon, LogOut, ShieldCheck, ShieldAlert, ArrowLeft } from 'lucide-react';
 
 export const Settings: React.FC = () => {
-  const { user, updateName, firebaseUser, logout, setScreen, setShowSavedAccounts, previousScreen } = useApp();
+  const { user, updateName, firebaseUser, logout, setScreen, setShowSavedAccounts, previousScreen, setShowLogoutConfirm } = useApp();
   const [name, setName] = useState(user.name);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
 
@@ -167,7 +167,7 @@ export const Settings: React.FC = () => {
       <div>
         {firebaseUser ? (
           <button
-            onClick={logout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-full py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <LogOut className="w-4 h-4" /> Log Out
